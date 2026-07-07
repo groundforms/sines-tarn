@@ -19,24 +19,33 @@ Engine_SinesTarn : CroneEngine {
       amp_atk=0.001, amp_rel=0.05, amp_slew=0.01, env_delay=0.0,
       env_delay_rand=0.0, pan=0.0, pan_lag=0.005, mul=1, modPartial=1, carPartial=1,
       fm_index=1.0, sample_rate=48000, bit_depth=24,
-      cutoff=20000, cutoff_lag=0.02;
-      var mod, car, car_decimate, car_filtered, amp_, hz_, pan_, vol_, cutoff_;
+      chorus=0.0, chorus_rate=0.5, chorus_lag=0.1;
+      var mod, car, car_decimate, amp_, hz_, pan_, vol_, chorus_amt, chorus_wet, chorus_sig;
 
       amp_ = EnvGen.ar(Env.circle([0, 1, 0, 0], [amp_atk, amp_rel, env_delay + env_delay_rand]), levelBias: env_bias);
       hz_ = Lag.ar(K2A.ar(hz), hz_lag);
       pan_ = Lag.ar(K2A.ar(pan), pan_lag);
       vol_ = Lag.ar(K2A.ar(vol), amp_slew);
-      // per-voice low pass cutoff, clamped above the fundamental so a voice
-      // never fully self-mutes, then smoothed to avoid zipper noise
-      cutoff_ = Lag.ar(K2A.ar(cutoff).max(hz_), cutoff_lag);
+      chorus_amt = Lag.kr(chorus, chorus_lag);
 
       mod = SinOsc.ar(hz_ * modPartial, 0, hz_ * fm_index * LFNoise1.kr(5.reciprocal).abs);
       car = SinOsc.ar(hz_ * carPartial + mod, 0, mul);
       car_decimate = Decimator.ar(car, sample_rate, bit_depth, 1.0, 0);
-      // LPF sits after decimation so it also tames the digital grunge/aliasing
-      car_filtered = LPF.ar(car_decimate, cutoff_);
 
-      Out.ar(out, Pan2.ar(car_filtered * amp_ * vol_, pan_));
+      // per-voice chorus: two slow, offset LFO-modulated delay taps summed with
+      // the dry sine. detuned copies beat against the fundamental, so unlike an
+      // LPF this always does something audible on a bare sine.
+      chorus_wet = Mix.new(
+        [0, 1].collect({ |k|
+          var lfo = SinOsc.kr(chorus_rate * (1 + (k * 0.13)), k * pi);
+          DelayC.ar(car_decimate, 0.05,
+            (0.010 + (k * 0.008)) + (lfo * 0.005 * chorus_amt));
+        })
+      ) * 0.5;
+      // amt 0 -> full dry, amt 1 -> mostly wet (equal-power crossfade)
+      chorus_sig = XFade2.ar(car_decimate, chorus_wet, (chorus_amt * 1.4) - 1);
+
+      Out.ar(out, Pan2.ar(chorus_sig * amp_ * vol_, pan_));
     });
 
     SynthDef.new(\sines_output, {|in, out|
@@ -49,7 +58,7 @@ Engine_SinesTarn : CroneEngine {
     bus = Bus.audio(server, 2);
     server.sync;
     synth = Array.fill(num, { Synth.new(\sin, [\out, bus], target: context.xg) });
-    #[\hz, \vol, \env_bias, \pan, \amp_atk, \amp_rel, \env_delay, \env_delay_rand, \amp_slew, \hz_lag, \pan_lag, \fm_index, \cutoff, \cutoff_lag].do({
+    #[\hz, \vol, \env_bias, \pan, \amp_atk, \amp_rel, \env_delay, \env_delay_rand, \amp_slew, \hz_lag, \pan_lag, \fm_index, \chorus, \chorus_rate, \chorus_lag].do({
       arg name;
       this.addCommand(name, "if", {
         arg msg;

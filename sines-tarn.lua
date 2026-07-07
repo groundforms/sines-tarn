@@ -3,7 +3,7 @@
 -- @p3r7, @sixolet, @tomwaters,
 -- @JosueArias, @x2mirko
 -- z_tuning lib by @zebra
--- updated to change note to frequency, remove env follower, remove crow stuff and add an LPF on each voice
+--
 -- ,-.   ,-.   ,-.
 --    `-'   `-'   `-'
 --
@@ -14,7 +14,7 @@
 --   E3 - freq +/- 0.5 hz
 -- ctrl page (K2)
 --   E1 - select param line
---   E2/E3 - edit (line 4 E3 = lp cutoff)
+--   E2/E3 - edit (line 4 E3 = chorus)
 -- K2 - toggle sines/ctrl
 --
 -- 16n control
@@ -225,7 +225,7 @@ function add_params()
 
   for i = 1, 16 do
     -- set voice params
-    params:add_group(i .. "n voice", 13)
+    params:add_group(i .. "n voice", 14)
     -- set voice vols
     params:add_control("vol" .. i,  i .. "n vol", controlspec.new(0.0, 1.0, 'lin', 0.01, 0.0))
     params:set_action("vol" .. i, function(x) set_vol(i - 1, x) end)
@@ -235,8 +235,11 @@ function add_params()
     params:add_control("freq" .. i, i .. "n freq", controlspec.new(20, 8000, 'lin', 0.5, 220, 'hz'))
     params:set_action("freq" .. i, function(x) set_freq(i - 1, x) end)
 
-    params:add_control("cutoff" .. i, i .. "n lp cutoff", controlspec.new(20, 20000, 'exp', 1, 20000, 'hz'))
-    params:set_action("cutoff" .. i, function(x) set_cutoff(i - 1, x) end)
+    params:add_control("chorus" .. i, i .. "n chorus", controlspec.new(0.0, 1.0, 'lin', 0.01, 0.0))
+    params:set_action("chorus" .. i, function(x) set_chorus(i - 1, x) end)
+
+    params:add_control("chorus_rate" .. i, i .. "n chorus rate", controlspec.new(0.05, 5.0, 'exp', 0.01, 0.5, 'hz'))
+    params:set_action("chorus_rate" .. i, function(x) set_chorus_rate(i - 1, x) end)
 
     params:add_control("fm_index" .. i, i .. "n fm index", controlspec.new(0.0, 200.0, 'lin', 1.0, 3.0))
     params:set_action("fm_index" .. i, function(x) set_fm_index(i - 1, x) end)
@@ -318,8 +321,14 @@ function set_freq(synth_num, value)
   screen_dirty = true
 end
 
-function set_cutoff(synth_num, value)
-  engine.cutoff(synth_num, value)
+function set_chorus(synth_num, value)
+  engine.chorus(synth_num, value)
+  edit = synth_num
+  screen_dirty = true
+end
+
+function set_chorus_rate(synth_num, value)
+  engine.chorus_rate(synth_num, value)
   edit = synth_num
   screen_dirty = true
 end
@@ -521,8 +530,8 @@ function enc(n, delta)
         -- fm index
         params:set("fm_index" .. edit + 1, params:get("fm_index" .. edit + 1) + delta)
       elseif params_select == 3 then
-        -- lp cutoff (replaces the old crow control)
-        params:delta("cutoff" .. edit + 1, delta)
+        -- chorus amount (replaces the old crow control)
+        params:delta("chorus" .. edit + 1, delta)
       end
     else
       -- freq fine, +/- 0.5 hz
@@ -601,10 +610,10 @@ function redraw_screen()
   screen.text(pan_formatter(params:get("pan" .. edit + 1)))
   screen.level(2)
   screen.move(62, 26)
-  screen.text("cut:")
+  screen.text("cho:")
   screen.level(current_state[5])
   screen.move(89, 26)
-  screen.text(math.floor(params:get("cutoff" .. edit + 1)) .. "")
+  screen.text(string.format("%.2f", params:get("chorus" .. edit + 1)))
   screen.update()
 end
 

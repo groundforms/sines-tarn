@@ -5,12 +5,12 @@
 
 Each voice is an FM sine (configurable carrier/modulator FM index) with its own
 per-voice sample rate, bit depth, amplitude envelope, pan, and a per-voice
-low-pass filter. Pitch is set directly in Hz rather than as scale notes.
+chorus. Pitch is set directly in Hz rather than as scale notes.
 
 ## What's different from `sines`
 
 * pitch is edited as **frequency in Hz**, not scale notes / MIDI note numbers
-* added a per-voice **low-pass filter** (cutoff in Hz)
+* added a per-voice **chorus** (amount on E3, rate in the params menu)
 * removed all **crow** output functions
 * removed the **envelope-follower** play mode
 * removed **z_tuning** support (the note/scale tuning model no longer applies)
@@ -45,7 +45,7 @@ show an **update** action from then on — pull new commits straight from norns.
 * line 1 — `E2` freq ±10 Hz / `E3` freq ±0.5 Hz
 * line 2 — `E2` envelope / `E3` env delay
 * line 3 — `E2` sample bitrate / `E3` FM index
-* line 4 — `E2` pan / `E3` **LP cutoff**
+* line 4 — `E2` pan / `E3` **chorus**
 
 **16n**
 * `n` — sine volume
