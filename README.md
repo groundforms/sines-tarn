@@ -1,43 +1,62 @@
-# Sines
+# sines-tarn
 
-A simple FM sine drone synth with 16 independant sine waves. Each sine wave is FM modulated with configurable carrier - modulator FM index. Sample rate and bit depth can be changed for each voice. 
+16 FM sine waves for norns — a stripped-down, frequency-first fork of
+[sines](https://github.com/groundforms/sines) by @oootini.
 
-![sines](sines.png)
+Each voice is an FM sine (configurable carrier/modulator FM index) with its own
+per-voice sample rate, bit depth, amplitude envelope, pan, and a per-voice
+low-pass filter. Pitch is set directly in Hz rather than as scale notes.
+
+## What's different from `sines`
+
+* pitch is edited as **frequency in Hz**, not scale notes / MIDI note numbers
+* added a per-voice **low-pass filter** (cutoff in Hz)
+* removed all **crow** output functions
+* removed the **envelope-follower** play mode
+* removed **z_tuning** support (the note/scale tuning model no longer applies)
+
+The engine SuperCollider class is `Engine_SinesTarn`, so this coexists with the
+original `sines` script without conflict.
 
 ## Installation
 
-Ensure you are up to date with the latest norns OS. Visit http://norns.local/ in a browser, and install `sines` from the maiden project manager.
+Ensure norns is up to date. In the maiden console, run:
 
-Then, `SYSTEM => RESET` on norns to pick up the new SuperCollider engine. Restart for good measure.
+```
+;install https://github.com/groundforms/sines-tarn
+```
 
-Optional: install @catfact's z_tuning norns mod to enable microtuning support in norns. Run `;install https://github.com/catfact/z_tuning` in the maiden console, and then enable it in `SYSTEM => MODS`. Reset + restart norns.
+Then `SYSTEM => RESET` on norns to pick up the SuperCollider engine, and restart
+for good measure.
 
-Sines uses the z_tuning mod when it is active. To switch to standard 12-tet tuning, disable z_tuning from the mods menu and restart norns.
+Installing this way clones the repo with git, so maiden's project manager will
+show an **update** action from then on — pull new commits straight from norns.
 
-## Play
+## Controls
 
-Select a root note and scale from the norns parameters menu. 16 frequencies based on the selected scale are applied. You can also tune the sine waves by hand on norns.
+**sines page**
+* `E1` — select active sine (1–16)
+* `E2` — frequency, ± 10 Hz
+* `E3` — frequency, ± 0.5 Hz
+* `K2` — toggle sines / ctrl page
 
-### Controls
-
-**norns**
-* `E2` - active sine
-* `E3` - sine volume
-* `K2` - toggle sines/ctrl
-* `K3` - toggle env/follow
+**ctrl page** (`K2`)
+* `E1` — select param line (1–4)
+* line 1 — `E2` freq ±10 Hz / `E3` freq ±0.5 Hz
+* line 2 — `E2` envelope / `E3` env delay
+* line 3 — `E2` sample bitrate / `E3` FM index
+* line 4 — `E2` pan / `E3` **LP cutoff**
 
 **16n**
-* `n` - sine volume
+* `n` — sine volume
 
-**crow**
-* `E1` - select crow config
+## MIDI control
 
-**z_tuning mod**
-* Change `z_tuning` options in parameters > edit > Z_TUNING
+The 16n fader controller is mapped by default; other MIDI controllers work too.
+Per-voice amplitude, envelope, bit depth, sample rate, FM index and cutoff are
+all exposed in the norns parameters menu for mapping.
 
-### Midi control
+## Credits
 
-The 16n midi controller is mapped by default. You can use other midi controllers too.
-
-Control individual sine amplitudes, envelopes, bit depth, sample rate, and FM index with a midi controller. Controls are mapped from the norns parameters page.
-
+Forked from `sines` by @oootini, with contributions from @p3r7, @sixolet,
+@tomwaters, @JosueArias, @x2mirko. Engine derived from @catfact's zebra.
