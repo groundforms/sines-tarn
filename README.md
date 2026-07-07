@@ -14,6 +14,8 @@ chorus. Pitch is set directly in Hz rather than as scale notes.
 * removed all **crow** output functions
 * removed the **envelope-follower** play mode
 * removed **z_tuning** support (the note/scale tuning model no longer applies)
+* removed the **scale** and **root note** params (voices are tuned directly in Hz)
+* added a global **chorus rate** param, overridable per voice in each voice group
 
 The engine SuperCollider class is `Engine_SinesTarn`, so this coexists with the
 original `sines` script without conflict.
@@ -31,6 +33,14 @@ for good measure.
 
 Installing this way clones the repo with git, so maiden's project manager will
 show an **update** action from then on — pull new commits straight from norns.
+
+## Defaults
+
+On a fresh install the 16 voices boot to solfeggio-family frequencies ascending
+147 → 963 Hz, panned left / middle / right in sets of three, with all effects at
+zero and sample rate at 48k. Everything is tuned in Hz and adjustable per voice.
+There's a global `chorus rate` in the top-level params; each voice's rate can be
+overridden in its own `n voice` group.
 
 ## Controls
 
@@ -53,7 +63,7 @@ show an **update** action from then on — pull new commits straight from norns.
 ## MIDI control
 
 The 16n fader controller is mapped by default; other MIDI controllers work too.
-Per-voice amplitude, envelope, bit depth, sample rate, FM index and cutoff are
+Per-voice amplitude, envelope, bit depth, sample rate, FM index and chorus are
 all exposed in the norns parameters menu for mapping.
 
 ## Credits

@@ -23,7 +23,6 @@
 engine.name = "SinesTarn"
 _mods = require 'core/mods'
 _16n = include "sines-tarn/lib/16n"
-MusicUtil = require "musicutil"
 
 local max_slider_size = 32
 local sliders = {}
@@ -62,9 +61,6 @@ local envs = {
 local value = 0
 local text = " "
 local step = 0
-local notes = {}
-local scale_names = {}
-local scale_toggle = false
 local control_toggle = false
 -- active state for sliders, params 0-3
 local current_state = {15, 2, 2, 2, 2}
@@ -191,16 +187,9 @@ function virtual_slider_callback(slider_id, v)
 end
 
 function add_params()
-  -- set the scale note values
-  for i = 1, #MusicUtil.SCALES do
-    table.insert(scale_names, string.lower(MusicUtil.SCALES[i].name))
-  end
-
-  params:add{type = "option", id = "scale_mode", name = "scale mode",
-    options = scale_names, default = 5, action = function() set_notes() end}
-
-  params:add{type = "number", id = "root_note", name = "root note",
-  min = 0, max = 127, default = 60, formatter = function(param) return MusicUtil.note_num_to_name(param:get(), true) end, action = function() set_notes() end}
+  -- global chorus rate; each voice can be overridden in its voice group
+  params:add_control("chorus_rate_global", "chorus rate", controlspec.new(0.05, 5.0, 'exp', 0.01, 0.5, 'hz'))
+  params:set_action("chorus_rate_global", function(x) set_chorus_rate_global(x) end)
 
   -- amp slew
   params:add_control("amp_slew", "amp slew", controlspec.new(0.01, 10, 'lin', 0.01, 1.5, 's'))
@@ -221,7 +210,16 @@ function add_params()
   end
 
   -- global pan settings
-  params:add{type = "number", id = "global_pan", name = "global panning", min = 0, max = 1, default = 0, formatter = function(param) return global_pan_formatter(param:get()) end, action = function(x) set_global_pan(x) end}
+  params:add{type = "number", id = "global_pan", name = "global panning", min = 0, max = 2, default = 0, formatter = function(param) return global_pan_formatter(param:get()) end, action = function(x) set_global_pan(x) end}
+
+  -- boot frequencies: solfeggio family, ascending 147 -> 963 hz
+  local boot_freqs = {
+    147, 174, 198, 208.5, 264, 285, 319.5, 370.5,
+    396, 417, 481.5, 528, 639, 741, 852, 963
+  }
+  -- boot pan: left / middle / right repeating in sets of 3
+  -- (-1 = left, 0 = middle, 1 = right, matching Pan2)
+  local boot_pans = {-1, 0, 1}
 
   for i = 1, 16 do
     -- set voice params
@@ -230,9 +228,9 @@ function add_params()
     params:add_control("vol" .. i,  i .. "n vol", controlspec.new(0.0, 1.0, 'lin', 0.01, 0.0))
     params:set_action("vol" .. i, function(x) set_vol(i - 1, x) end)
 
-    params:add{type = "number", id = "pan" ..i, name = i .. "n pan", min = -1, max = 1, default = 0, formatter = function(param) return pan_formatter(param:get()) end, action = function(x) set_synth_pan(i - 1, x) end}
+    params:add{type = "number", id = "pan" ..i, name = i .. "n pan", min = -1, max = 1, default = boot_pans[((i - 1) % 3) + 1], formatter = function(param) return pan_formatter(param:get()) end, action = function(x) set_synth_pan(i - 1, x) end}
 
-    params:add_control("freq" .. i, i .. "n freq", controlspec.new(20, 8000, 'lin', 0.5, 220, 'hz'))
+    params:add_control("freq" .. i, i .. "n freq", controlspec.new(20, 8000, 'lin', 0.5, boot_freqs[i], 'hz'))
     params:set_action("freq" .. i, function(x) set_freq(i - 1, x) end)
 
     params:add_control("chorus" .. i, i .. "n chorus", controlspec.new(0.0, 1.0, 'lin', 0.01, 0.0))
@@ -241,7 +239,7 @@ function add_params()
     params:add_control("chorus_rate" .. i, i .. "n chorus rate", controlspec.new(0.05, 5.0, 'exp', 0.01, 0.5, 'hz'))
     params:set_action("chorus_rate" .. i, function(x) set_chorus_rate(i - 1, x) end)
 
-    params:add_control("fm_index" .. i, i .. "n fm index", controlspec.new(0.0, 200.0, 'lin', 1.0, 3.0))
+    params:add_control("fm_index" .. i, i .. "n fm index", controlspec.new(0.0, 200.0, 'lin', 1.0, 0.0))
     params:set_action("fm_index" .. i, function(x) set_fm_index(i - 1, x) end)
 
     params:add{type = "number", id = "env" .. i, name = i .. "n env", min = 1, max = 16, default = 1, formatter = function(param) return env_formatter(param:get()) end, action = function(x) set_env(i, x) end}
@@ -277,22 +275,10 @@ function add_params()
 
 end
 
-function build_scale()
-  notes = MusicUtil.generate_scale_of_length(params:get("root_note"), params:get("scale_mode"), 16)
-  local num_to_add = 16 - #notes
-  for i = 1, num_to_add do
-    table.insert(notes, notes[16 - num_to_add])
+function set_chorus_rate_global(value)
+  for i = 1,16 do
+    params:set("chorus_rate" .. i, value)
   end
-end
-
-function set_notes()
-  build_scale()
-  scale_toggle = true
-  for i = 1, 16 do
-    -- seed each voice's frequency (hz) from the selected scale
-    params:set("freq" .. i, MusicUtil.note_num_to_freq(notes[i]))
-  end
-  scale_toggle = false
 end
 
 function set_env_delay_rand_global(value)
@@ -315,9 +301,7 @@ end
 function set_freq(synth_num, value)
   engine.hz(synth_num, value)
   engine.hz_lag(synth_num, 0.005)
-  if not scale_toggle then
-    edit = synth_num
-  end
+  edit = synth_num
   screen_dirty = true
 end
 
@@ -361,8 +345,10 @@ function env_delay_formatter(value)
 end
 
 function sample_bitrate_formatter(value)
-  local sample_bitrate_preset = sample_bitrates[value][1]
-  return (sample_bitrate_preset)
+  -- show the sample rate as its khz value (48000 -> "48", 44100 -> "44.1", 800 -> "0.8")
+  local khz = sample_bitrates[value][2] / 1000
+  local s = string.format("%.2f", khz):gsub("%.?0+$", "")
+  return s
 end
 
 function set_sample_bitrate(synth_num, value)
@@ -420,19 +406,21 @@ end
 
 function pan_formatter(value)
   if value == -1 then
-    text = "right"
+    text = "left"
   elseif value == 0 then
     text = "middle"
   elseif value == 1 then
-    text = "left"
+    text = "right"
   end
   return (text)
 end
 
 function global_pan_formatter(value)
   if value == 0 then
-    text = "middle"
+    text = "manual"
   elseif value == 1 then
+    text = "middle"
+  elseif value == 2 then
     text = "left/right"
   end
   return (text)
@@ -458,13 +446,14 @@ function set_active()
 end
 
 function set_global_pan(value)
-  -- pan position on the bus, 0 is middle, 1 is l/r
-  if value == 0 then
+  -- 0 = manual (leave per-voice pans as they are)
+  if value == 1 then
+    -- middle
     for i = 1, 16 do
       set_synth_pan(i, 0)
       params:set("pan" .. i, 0)
     end
-  elseif value == 1 then
+  elseif value == 2 then
     for i = 1, 16 do
       if i % 2 == 0 then
         -- even, pan right
@@ -477,16 +466,6 @@ function set_global_pan(value)
       end
     end
   end
-end
-
--- update when a cc change is detected
-m = midi.connect()
-m.event = function(data)
-local d = midi.to_msg(data)
-  if d.type == "note_on" then
-    params:set("root_note", d.note)
-  end
-  screen_dirty = true
 end
 
 function enc(n, delta)
