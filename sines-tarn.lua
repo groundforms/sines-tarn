@@ -3,7 +3,7 @@
 -- @p3r7, @sixolet, @tomwaters,
 -- @JosueArias, @x2mirko
 -- z_tuning lib by @zebra
---
+-- updated to change note to frequency, remove env follower, remove crow stuff and add an LPF on each voice
 -- ,-.   ,-.   ,-.
 --    `-'   `-'   `-'
 --
@@ -14,7 +14,7 @@
 --   E3 - freq +/- 0.5 hz
 -- ctrl page (K2)
 --   E1 - select param line
---   E2/E3 - edit (E3 = lp cutoff)
+--   E2/E3 - edit (line 4 E3 = lp cutoff)
 -- K2 - toggle sines/ctrl
 --
 -- 16n control
@@ -512,14 +512,17 @@ function enc(n, delta)
   elseif n == 3 then
     if control_toggle then
       if params_select == 0 then
-        -- lp cutoff (replaces the old crow control)
-        params:delta("cutoff" .. edit + 1, delta)
+        -- freq fine, +/- 0.5 hz
+        params:set("freq" .. edit + 1, params:get("freq" .. edit + 1) + delta * 0.5)
       elseif params_select == 1 then
         -- env delay
         params:set("env_delay" .. edit + 1, params:get("env_delay" .. edit + 1) + delta)
       elseif params_select == 2 then
         -- fm index
         params:set("fm_index" .. edit + 1, params:get("fm_index" .. edit + 1) + delta)
+      elseif params_select == 3 then
+        -- lp cutoff (replaces the old crow control)
+        params:delta("cutoff" .. edit + 1, delta)
       end
     else
       -- freq fine, +/- 0.5 hz
@@ -566,12 +569,6 @@ function redraw_screen()
   screen.level(current_state[2])
   screen.move(24, 5)
   screen.text(string.format("%.1f", params:get("freq" .. edit + 1)) .. "hz")
-  screen.move(74, 5)
-  screen.level(2)
-  screen.text("cut:")
-  screen.level(current_state[2])
-  screen.move(95, 5)
-  screen.text(math.floor(params:get("cutoff" .. edit + 1)) .. "")
   screen.move(0, 12)
   screen.level(2)
   screen.text("envl:")
@@ -602,6 +599,12 @@ function redraw_screen()
   screen.level(current_state[5])
   screen.move(24, 26)
   screen.text(pan_formatter(params:get("pan" .. edit + 1)))
+  screen.level(2)
+  screen.move(62, 26)
+  screen.text("cut:")
+  screen.level(current_state[5])
+  screen.move(89, 26)
+  screen.text(math.floor(params:get("cutoff" .. edit + 1)) .. "")
   screen.update()
 end
 
