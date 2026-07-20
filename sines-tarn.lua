@@ -10,11 +10,11 @@
 -- ▼ controls ▼
 -- sines page
 --   E1 - select sine
---   E2 - freq +/- 10 hz
+--   E2 - sine volume
 --   E3 - freq +/- 0.5 hz
 -- ctrl page (K2)
 --   E1 - select param line
---   E2/E3 - edit (line 4 E3 = chorus)
+--   E2/E3 - edit (line 1 E2 = freq +/- 10 hz, line 4 E3 = chorus)
 -- K2 - toggle sines/ctrl
 --
 -- 16n control
@@ -494,8 +494,10 @@ function enc(n, delta)
         params:set("pan" .. edit + 1, params:get("pan" .. edit + 1) + delta)
       end
     else
-      -- freq coarse, +/- 10 hz
-      params:set("freq" .. edit + 1, params:get("freq" .. edit + 1) + delta * 10)
+      -- sines page: volume of the selected sine
+      local new_v = sliders[edit + 1] + (delta * 2)
+      local amp_value = util.linlin(0, max_slider_size, 0.0, 1.0, new_v)
+      params:set("vol" .. edit + 1, amp_value)
     end
   elseif n == 3 then
     if control_toggle then

@@ -46,7 +46,7 @@ overridden in its own `n voice` group.
 
 **sines page**
 * `E1` — select active sine (1–16)
-* `E2` — frequency, ± 10 Hz
+* `E2` — sine volume
 * `E3` — frequency, ± 0.5 Hz
 * `K2` — toggle sines / ctrl page
 
@@ -57,8 +57,11 @@ overridden in its own `n voice` group.
 * line 3 — `E2` sample bitrate / `E3` FM index
 * line 4 — `E2` pan / `E3` **chorus**
 
-**16n**
+**16n** (optional)
 * `n` — sine volume
+
+A grid and 16n are both optional — the script is fully playable from the norns
+encoders alone.
 
 ## MIDI control
 
